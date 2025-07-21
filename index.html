@@ -1,75 +1,68 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Gestione Spese</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f6f6f6;
-    }
-    label {
-      font-weight: bold;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    .persone-grid {
-      display: flex;
-      gap: 50px;
-    }
-    .colonna {
-      display: flex;
-      flex-direction: column;
-    }
-    input, select {
-      padding: 5px;
-      margin-top: 5px;
-    }
-    button {
-      margin-top: 10px;
-    }
+    body { font-family: Arial; margin: 20px; }
+    label { font-size: 0.9em; margin-bottom: 5px; display: block; }
+    input, select, button, datalist { margin: 5px 0; }
+    #personeCheckbox { display: flex; gap: 40px; }
+    #colonna1, #colonna2 { display: flex; flex-direction: column; }
+    #sintesiFinale { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+    .section-title { font-size: 1.2em; margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Gestione Spese</h2>
+
+  <h2>Gestione Spese Vacanza</h2>
 
   <form id="spesaForm">
-    <div class="form-group">
-      <label for="paga">Chi ha pagato:</label><br/>
+    <div>
+      <label>Chi ha pagato:</label>
       <select id="paga" required></select>
     </div>
 
-    <div class="form-group">
-      <label for="importo">Importo:</label><br/>
-      <input type="number" id="importo" step="0.01" required /> €
+    <div>
+      <label>Importo:</label>
+      <input type="number" id="importo" required step="0.01"> €
     </div>
 
-    <div class="form-group">
-      <label for="descrizione">Descrizione:</label><br/>
-      <input type="text" id="descrizione" list="suggerimenti" placeholder="Inserisci descrizione"/>
-      <datalist id="suggerimenti"></datalist>
+    <div>
+      <label>Descrizione:</label>
+      <input list="descrizioni" id="descrizione" required>
+      <datalist id="descrizioni">
+        <option value="Spesa del 21/07/2025">
+        <option value="Colazione del 21/07/2025">
+        <option value="Pranzo del 21/07/2025">
+        <option value="Cena del 21/07/2025">
+        <option value="Aperitivo del 21/07/2025">
+        <option value="Gelato del 21/07/2025">
+      </datalist>
     </div>
 
-    <div class="form-group">
-      <label>Per chi è la spesa:</label><br/>
-      <label><input type="checkbox" id="tutti" /> Tutti</label>
-      <div class="persone-grid">
-        <div class="colonna" id="col1"></div>
-        <div class="colonna" id="col2"></div>
+    <div>
+      <label>Per chi è la spesa:</label>
+      <button type="button" id="selezionaTutti">Tutti</button>
+      <div id="personeCheckbox">
+        <div id="colonna1"></div>
+        <div id="colonna2"></div>
       </div>
     </div>
 
-    <button type="submit">Aggiungi spesa</button>
+    <button type="submit">Aggiungi Spesa</button>
   </form>
 
-  <h3>Spese</h3>
+  <div class="section-title">Spese</div>
   <ul id="listaSpese"></ul>
 
-  <h3>Transazioni suggerite</h3>
+  <div class="section-title">Operazioni da fare</div>
   <ul id="transazioni"></ul>
+
+  <div class="section-title">Sintesi Finale</div>
+  <div id="sintesiFinale"></div>
 
   <script src="script.js"></script>
 </body>
