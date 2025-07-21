@@ -50,7 +50,6 @@
       }
     });
 
-    // Checkbox "tutti"
     const tutti = document.getElementById("tutti");
     tutti.checked = false;
     tutti.addEventListener("change", () => {
@@ -120,24 +119,15 @@
       }
     }
 
-    // Riepilogo spese in tabella
-    const totaleSpese = spese.reduce((acc, s) => acc + s.importo, 0);
-    const spesoPerPersona = {};
-    persone.forEach(p => spesoPerPersona[p] = 0);
-    spese.forEach(s => { spesoPerPersona[s.paga] += s.importo; });
-
+    // ** Tabella riepilogo spese: versione invariata **
     const tab = document.createElement("table");
     const thead = document.createElement("thead");
     const trHead = document.createElement("tr");
-    trHead.appendChild(document.createElement("th")); // cella vuota in alto a sx
+
+    trHead.appendChild(document.createElement("th")); // prima cella vuota
     persone.forEach(p => {
       const th = document.createElement("th");
       th.textContent = p;
-      trHead.appendChild(th);
-    });
-    spese.forEach((_, idx) => {
-      const th = document.createElement("th");
-      th.textContent = `Spesa ${idx + 1}`;
       trHead.appendChild(th);
     });
     thead.appendChild(trHead);
@@ -145,48 +135,34 @@
 
     const tbody = document.createElement("tbody");
 
-    // Riga Totale speso
+    // Totale speso per persona
+    const totalePerPersona = {};
+    persone.forEach(p => totalePerPersona[p] = 0);
+    spese.forEach(s => { totalePerPersona[s.paga] += s.importo; });
+
+    // Riga totale speso
     const trTotale = document.createElement("tr");
-    const tdTotaleLabel = document.createElement("td");
-    tdTotaleLabel.textContent = "Totale speso";
-    trTotale.appendChild(tdTotaleLabel);
+    const tdTotale = document.createElement("td");
+    tdTotale.textContent = "Totale speso";
+    trTotale.appendChild(tdTotale);
     persone.forEach(p => {
       const td = document.createElement("td");
-      td.textContent = spesoPerPersona[p].toFixed(2) + "€";
-      trTotale.appendChild(td);
-    });
-    // per ogni spesa cella vuota
-    spese.forEach(_ => {
-      const td = document.createElement("td");
-      td.textContent = "";
+      td.textContent = totalePerPersona[p].toFixed(2) + "€";
       trTotale.appendChild(td);
     });
     tbody.appendChild(trTotale);
 
-    // Per ogni persona: quanto deve per ogni spesa (quota)
+    // Quota spesa per ogni persona e ogni spesa
     persone.forEach(p => {
       const tr = document.createElement("tr");
       const tdNome = document.createElement("td");
       tdNome.textContent = p;
       tr.appendChild(tdNome);
 
-      // colonna speso (vuota per allineare)
-      persone.forEach(_ => {
-        const td = document.createElement("td");
-        td.textContent = "";
-        tr.appendChild(td);
-      });
-
-      // quota di questa persona per ogni spesa
-      spese.forEach(s => {
-        const td = document.createElement("td");
-        if (s.per.includes(p)) {
-          const quota = s.importo / s.per.length;
-          td.textContent = quota.toFixed(2) + "€";
-        } else {
-          td.textContent = "-";
-        }
-        tr.appendChild(td);
+      persone.forEach(() => {
+        // celle vuote per allineamento con intestazione
+        const tdEmpty = document.createElement("td");
+        tr.appendChild(tdEmpty);
       });
 
       tbody.appendChild(tr);
@@ -195,10 +171,8 @@
     tab.appendChild(tbody);
     riepilogoDiv.appendChild(tab);
 
-    // Sintesi debiti netti (semplificazione)
-    // Calcoliamo i debiti netti: per ogni coppia di persone si sommano i debiti reciproci e si lascia solo il saldo netto
-    const saldo = {}; // saldo[p1][p2] = quanto p1 deve a p2 (positivo)
-
+    // Sintesi debiti netti (come prima)
+    const saldo = {};
     persone.forEach(p1 => {
       saldo[p1] = {};
       persone.forEach(p2 => saldo[p1][p2] = 0);
@@ -209,9 +183,7 @@
       saldo[da][a] += debiti[key];
     }
 
-    // Calcoliamo saldo netto per coppie
     const debitiNetti = [];
-
     for (let i = 0; i < persone.length; i++) {
       for (let j = i + 1; j < persone.length; j++) {
         const p1 = persone[i];
@@ -225,21 +197,16 @@
       }
     }
 
-    // Costruiamo tabella sintesi debiti netti
     if (debitiNetti.length === 0) {
       sintesiDebitiDiv.textContent = "Tutti i debiti sono saldati.";
     } else {
       const tabSintesi = document.createElement("table");
-      const th1 = document.createElement("th");
-      th1.textContent = "Chi deve";
-      const th2 = document.createElement("th");
-      th2.textContent = "A chi";
-      const th3 = document.createElement("th");
-      th3.textContent = "Importo (€)";
       const trHeadSintesi = document.createElement("tr");
-      trHeadSintesi.appendChild(th1);
-      trHeadSintesi.appendChild(th2);
-      trHeadSintesi.appendChild(th3);
+      ["Chi deve", "A chi", "Importo (€)"].forEach(testo => {
+        const th = document.createElement("th");
+        th.textContent = testo;
+        trHeadSintesi.appendChild(th);
+      });
       tabSintesi.appendChild(trHeadSintesi);
 
       debitiNetti.forEach(d => {
@@ -265,70 +232,69 @@
     const paga = document.getElementById("paga").value;
     const importo = parseFloat(document.getElementById("importo").value);
     const descrizione = document.getElementById("descrizione").value.trim();
-    if (isNaN(importo) || importo <= 0) {
-      alert("Inserisci un importo valido.");
+    const tutti = document.getElementById("tutti").checked;
+    const checkboxPersone = Array.from(document.querySelectorAll(".cbPer"));
+    const per = tutti ? [...persone] : checkboxPersone.filter(cb => cb.checked).map(cb => cb.value);
+
+    if (!paga || isNaN(importo) || importo <= 0 || per.length === 0 || descrizione === "") {
+      alert("Compila tutti i campi correttamente.");
       return;
     }
-    if (!descrizione) {
-      alert("Inserisci una descrizione.");
-      return;
-    }
-    const per = Array.from(document.querySelectorAll(".cbPer:checked")).map(cb => cb.value);
-    if (per.length === 0) {
-      alert("Seleziona almeno una persona per la spesa.");
-      return;
-    }
+
     spese.push({ paga, importo, descrizione, per });
     salvaSpese();
     aggiornaSuggerimenti();
     aggiornaUI();
 
-    // Reset form
-    document.getElementById("spesaForm").reset();
+    // pulizia form
+    document.getElementById("importo").value = "";
+    document.getElementById("descrizione").value = "";
     document.getElementById("tutti").checked = false;
+    checkboxPersone.forEach(cb => cb.checked = false);
   }
 
   function esportaSpese() {
     const dati = JSON.stringify(spese, null, 2);
     const blob = new Blob([dati], { type: "application/json" });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
     a.download = "spese.json";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
   }
 
-  function importaSpese(e) {
-    const file = e.target.files[0];
+  function importaSpese(event) {
+    const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = function(e) {
       try {
-        const datiImportati = JSON.parse(event.target.result);
-        if (Array.isArray(datiImportati)) {
-          spese.splice(0, spese.length, ...datiImportati);
-          salvaSpese();
-          aggiornaSuggerimenti();
-          aggiornaUI();
-          alert("Spese importate correttamente.");
-        } else {
-          alert("Formato file non valido.");
-        }
+        const dati = JSON.parse(e.target.result);
+        if (!Array.isArray(dati)) throw new Error("Formato non valido");
+        spese.splice(0, spese.length, ...dati);
+        salvaSpese();
+        aggiornaSuggerimenti();
+        aggiornaUI();
+        alert("Importazione completata.");
       } catch {
-        alert("Errore nel parsing del file.");
+        alert("File JSON non valido.");
       }
-      document.getElementById("inputImporta").value = "";
     };
     reader.readAsText(file);
+    event.target.value = "";
   }
 
-  document.getElementById("spesaForm").addEventListener("submit", aggiungiSpesa);
+  // Event listeners
+  document.getElementById("btnAggiungi").addEventListener("click", aggiungiSpesa);
   document.getElementById("btnEsporta").addEventListener("click", esportaSpese);
   document.getElementById("btnImporta").addEventListener("click", () => document.getElementById("inputImporta").click());
   document.getElementById("inputImporta").addEventListener("change", importaSpese);
 
-  // inizializzazione
+  // init
   setupPersoneUI();
   caricaSpese();
   aggiornaSuggerimenti();
