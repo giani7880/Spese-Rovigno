@@ -1,62 +1,91 @@
 const spese = [];
-const pagamentiEffettuati = [];
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 function aggiornaUI() {
   const lista = document.getElementById("listaSpese");
   const transUI = document.getElementById("transazioni");
+  const riepilogo = document.getElementById("riepilogoTabella");
   lista.innerHTML = "";
   transUI.innerHTML = "";
+  riepilogo.innerHTML = "";
 
-  const saldi = {}; // saldo netto per persona
-  const debitiDettagliati = {}; // debiti da → a
+  const debiti = {};
+  const spesePerPersona = {};
+  const dovutoPerPersona = {};
+  const dettagliSpese = [];
 
-  persone.forEach(p => saldi[p] = 0);
+  for (const p of persone) {
+    spesePerPersona[p] = 0;
+    dovutoPerPersona[p] = 0;
+  }
 
-  for (const s of spese) {
+  spese.forEach((s, index) => {
+    const quota = s.importo / s.per.length;
+    dettagliSpese.push({ descrizione: s.descrizione, quote: {} });
+
     const li = document.createElement("li");
-    li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
+    li.textContent = `${s.paga} ha pagato ${s.importo.toFixed(2)}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
 
-    const quota = s.importo / s.per.length;
+    spesePerPersona[s.paga] += s.importo;
+
     for (const beneficiario of s.per) {
-      if (beneficiario === s.paga) {
-        saldi[s.paga] += s.importo - quota;
-      } else {
-        saldi[beneficiario] -= quota;
-        saldi[s.paga] += quota;
-
+      dettagliSpese[index].quote[beneficiario] = quota;
+      if (beneficiario !== s.paga) {
         const chiave = `${beneficiario}->${s.paga}`;
-        debitiDettagliati[chiave] = (debitiDettagliati[chiave] || 0) + quota;
+        debiti[chiave] = (debiti[chiave] || 0) + quota;
       }
+      dovutoPerPersona[beneficiario] += quota;
     }
-  }
+  });
 
-  // Raggruppa per debitore
-  const debitori = {};
-  for (const chiave in debitiDettagliati) {
+  // Operazioni suggerite
+  const aggregati = {};
+  for (const chiave in debiti) {
     const [da, a] = chiave.split("->");
-    if (!debitori[da]) debitori[da] = {};
-    debitori[da][a] = (debitori[da][a] || 0) + debitiDettagliati[chiave];
+    if (!aggregati[da]) aggregati[da] = [];
+    aggregati[da].push({ a, quanto: debiti[chiave] });
   }
 
-  for (const da in debitori) {
-    const totale = Object.values(debitori[da]).reduce((a, b) => a + b, 0);
-    const titolo = document.createElement("li");
-    titolo.innerHTML = `<strong>${da} (debito totale: ${totale.toFixed(2)}€):</strong>`;
-    transUI.appendChild(titolo);
-
-    for (const a in debitori[da]) {
-      const importo = debitori[da][a].toFixed(2);
-      const voce = document.createElement("li");
-      voce.innerHTML = `→ ${importo}€ a ${a}`;
-      transUI.appendChild(voce);
-    }
+  for (const da in aggregati) {
+    const totale = aggregati[da].reduce((sum, t) => sum + t.quanto, 0).toFixed(2);
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${da}</strong> (debito totale: ${totale}€):<br/>` +
+      aggregati[da].map(t => `→ ${t.quanto.toFixed(2)}€ a ${t.a}`).join("<br/>");
+    transUI.appendChild(li);
   }
+
+  // Riepilogo tabella
+  const table = document.createElement("table");
+  const header = document.createElement("tr");
+  header.innerHTML = `<th>Persona</th>` +
+                     dettagliSpese.map(s => `<th>${s.descrizione}</th>`).join("") +
+                     `<th>Totale speso</th><th>Totale dovuto</th>`;
+  table.appendChild(header);
+
+  for (const p of persone) {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${p}</td>` +
+      dettagliSpese.map(s => `<td>${s.quote[p]?.toFixed(2) || "0.00"}</td>`).join("") +
+      `<td>${spesePerPersona[p].toFixed(2)}</td><td>${dovutoPerPersona[p].toFixed(2)}</td>`;
+    table.appendChild(row);
+  }
+
+  // Totale finale
+  const rowTotale = document.createElement("tr");
+  rowTotale.innerHTML = `<th>Totali</th>` +
+    dettagliSpese.map(s => {
+      const somma = Object.values(s.quote).reduce((a, b) => a + b, 0);
+      return `<th>${somma.toFixed(2)}</th>`;
+    }).join("") +
+    `<th>${Object.values(spesePerPersona).reduce((a, b) => a + b, 0).toFixed(2)}</th>` +
+    `<th>${Object.values(dovutoPerPersona).reduce((a, b) => a + b, 0).toFixed(2)}</th>`;
+  table.appendChild(rowTotale);
+
+  riepilogo.appendChild(table);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Popola il select di chi ha pagato
   const select = document.getElementById("paga");
   persone.forEach(p => {
     const option = document.createElement("option");
@@ -65,7 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
     select.appendChild(option);
   });
 
-  // Popola i checkbox
   const col1 = document.getElementById("col1");
   const col2 = document.getElementById("col2");
   persone.forEach((p, i) => {
@@ -78,7 +106,6 @@ document.addEventListener("DOMContentLoaded", () => {
     (i < 3 ? col1 : col2).appendChild(label);
   });
 
-  // Suggerimenti descrizione
   const oggi = new Date();
   const data = `${String(oggi.getDate()).padStart(2, "0")}/${String(oggi.getMonth() + 1).padStart(2, "0")}/${oggi.getFullYear()}`;
   const suggerimenti = [
@@ -96,22 +123,22 @@ document.addEventListener("DOMContentLoaded", () => {
     datalist.appendChild(option);
   });
 
-  // Checkbox "Tutti"
   document.getElementById("tutti").addEventListener("change", function () {
     const allCheckboxes = document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]");
     allCheckboxes.forEach(cb => cb.checked = this.checked);
   });
 
-  // Form submit
   document.getElementById("spesaForm").addEventListener("submit", e => {
     e.preventDefault();
     const paga = document.getElementById("paga").value;
     const importo = parseFloat(document.getElementById("importo").value);
-    const descrizione = document.getElementById("descrizione").value;
+    const descrizione = document.getElementById("descrizione").value.trim();
     const beneficiari = [...document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]")]
       .filter(cb => cb.checked)
       .map(cb => cb.value);
-    if (!paga || isNaN(importo) || beneficiari.length === 0) return;
+
+    if (!paga || isNaN(importo) || beneficiari.length === 0 || !descrizione) return;
+
     spese.push({ paga, importo, descrizione, per: beneficiari });
     document.getElementById("spesaForm").reset();
     aggiornaUI();
