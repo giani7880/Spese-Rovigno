@@ -1,82 +1,104 @@
-const spese = [];
+const spese = JSON.parse(localStorage.getItem("spese")) || [];
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
+
+function salvaDati() {
+  localStorage.setItem("spese", JSON.stringify(spese));
+}
 
 function aggiornaUI() {
   const lista = document.getElementById("listaSpese");
   const transUI = document.getElementById("transazioni");
-  const riepilogo = document.getElementById("riepilogoTable");
+  const riepilogo = document.getElementById("riepilogo");
+  const sintesiNetta = document.getElementById("sintesiNetta");
   lista.innerHTML = "";
   transUI.innerHTML = "";
   riepilogo.innerHTML = "";
+  sintesiNetta.innerHTML = "";
 
   const debiti = {};
-  const totaliSpesi = {};
-  persone.forEach(p => totaliSpesi[p] = 0);
+  const pagatoDa = {};
+  const ricevuto = {};
 
-  // Popola lista spese
-  spese.forEach((s, idx) => {
+  for (const p of persone) {
+    pagatoDa[p] = 0;
+    ricevuto[p] = {};
+    for (const alt of persone) {
+      if (p !== alt) ricevuto[p][alt] = 0;
+    }
+  }
+
+  for (const s of spese) {
     const li = document.createElement("li");
     li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
 
     const quota = s.importo / s.per.length;
-    totaliSpesi[s.paga] += s.importo;
-
+    pagatoDa[s.paga] += s.importo;
     for (const beneficiario of s.per) {
-      if (beneficiario === s.paga) continue;
-      const chiave = `${beneficiario}->${s.paga}`;
-      debiti[chiave] = (debiti[chiave] || 0) + quota;
+      if (beneficiario !== s.paga) {
+        ricevuto[beneficiario][s.paga] += quota;
+      }
     }
-  });
-
-  // Riepilogo delle transazioni
-  const riepilogoDebiti = {};
-  for (const chiave in debiti) {
-    const [da, a] = chiave.split("->");
-    if (!riepilogoDebiti[da]) riepilogoDebiti[da] = [];
-    riepilogoDebiti[da].push({ a, quanto: debiti[chiave] });
   }
 
-  for (const persona in riepilogoDebiti) {
-    const dettagli = riepilogoDebiti[persona];
-    const totale = dettagli.reduce((sum, d) => sum + d.quanto, 0).toFixed(2);
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${persona}</strong> (debito totale: ${totale}€):<ul style="margin: 5px 0 10px 15px;">` +
-      dettagli.map(d => `<li>→ ${d.quanto.toFixed(2)}€ a ${d.a}</li>`).join("") + "</ul>";
-    transUI.appendChild(li);
+  // Operazioni da fare
+  const debitiPerPersona = {};
+  for (const da of persone) {
+    let totaleDebito = 0;
+    for (const a of persone) {
+      if (da === a) continue;
+      const quanto = ricevuto[da][a];
+      if (quanto > 0) {
+        if (!debitiPerPersona[da]) debitiPerPersona[da] = [];
+        debitiPerPersona[da].push({ verso: a, importo: quanto });
+        totaleDebito += quanto;
+      }
+    }
+    if (debitiPerPersona[da]) {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${da} (debito totale: ${totaleDebito.toFixed(2)}€):</strong><ul>${debitiPerPersona[da].map(t => `<li>→ ${t.importo.toFixed(2)}€ a ${t.verso}</li>`).join("")}</ul>`;
+      transUI.appendChild(li);
+    }
   }
 
-  // Tabella riepilogo spese
-  const header = document.createElement("tr");
-  header.innerHTML = "<th>Persona</th><th>Totale speso</th>" +
-    spese.map((s, i) => `<th>${s.descrizione}</th>`).join("");
-  riepilogo.appendChild(header);
-
-  persone.forEach(persona => {
-    const row = document.createElement("tr");
-    let html = `<td>${persona}</td><td>${totaliSpesi[persona].toFixed(2)}€</td>`;
-    for (const s of spese) {
-      const quota = s.per.includes(persona) ? (s.importo / s.per.length).toFixed(2) : "-";
-      html += `<td>${quota !== "-" ? quota + "€" : "-"}</td>`;
-    }
-    row.innerHTML = html;
-    riepilogo.appendChild(row);
+  // Riepilogo spese per persona
+  const intestazione = `<tr><th>Persona</th><th>Speso</th>${spese.map(s => `<th>${s.descrizione}</th>`).join("")}</tr>`;
+  const righe = persone.map(p => {
+    const spesePerPersona = spese.map(s => {
+      const quota = s.per.includes(p) ? (s.importo / s.per.length) : 0;
+      return `<td>${quota.toFixed(2)}</td>`;
+    }).join("");
+    return `<tr><td>${p}</td><td>${pagatoDa[p].toFixed(2)}</td>${spesePerPersona}</tr>`;
   });
+  riepilogo.innerHTML = `<h3>Riepilogo spese</h3><table border="1">${intestazione}${righe.join("")}</table>`;
+
+  // Sintesi debiti netti
+  const netti = {};
+  for (const da of persone) {
+    for (const a of persone) {
+      if (da === a) continue;
+      const daA = ricevuto[da][a] || 0;
+      const aDa = ricevuto[a][da] || 0;
+      const netto = daA - aDa;
+      if (netto > 0) {
+        const chiave = `${da}->${a}`;
+        netti[chiave] = netto;
+      }
+    }
+  }
+
+  const tabellaNetta = `<h3>Sintesi debiti netti</h3>
+  <table border="1">
+    <tr><th>Da</th><th>A</th><th>Importo Netto</th></tr>
+    ${Object.entries(netti).map(([k, v]) => {
+      const [da, a] = k.split("->");
+      return `<tr><td>${da}</td><td>${a}</td><td>${v.toFixed(2)}€</td></tr>`;
+    }).join("")}
+  </table>`;
+  sintesiNetta.innerHTML = tabellaNetta;
 }
 
-// Caricamento iniziale da localStorage
 document.addEventListener("DOMContentLoaded", () => {
-  const datiSalvati = localStorage.getItem("spese");
-  if (datiSalvati) {
-    try {
-      const caricate = JSON.parse(datiSalvati);
-      if (Array.isArray(caricate)) spese.push(...caricate);
-    } catch (e) {
-      console.error("Errore nel caricamento da localStorage:", e);
-    }
-  }
-
-  // Popola select "chi ha pagato"
   const select = document.getElementById("paga");
   persone.forEach(p => {
     const option = document.createElement("option");
@@ -85,7 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
     select.appendChild(option);
   });
 
-  // Popola checkbox "per chi"
   const col1 = document.getElementById("col1");
   const col2 = document.getElementById("col2");
   persone.forEach((p, i) => {
@@ -98,16 +119,10 @@ document.addEventListener("DOMContentLoaded", () => {
     (i < 3 ? col1 : col2).appendChild(label);
   });
 
-  // Suggerimenti per descrizione
   const oggi = new Date();
   const data = `${String(oggi.getDate()).padStart(2, "0")}/${String(oggi.getMonth() + 1).padStart(2, "0")}/${oggi.getFullYear()}`;
   const suggerimenti = [
-    `Spesa ${data}`,
-    `Colazione ${data}`,
-    `Pranzo ${data}`,
-    `Cena ${data}`,
-    `Aperitivo ${data}`,
-    `Gelato ${data}`
+    `Spesa ${data}`, `Colazione ${data}`, `Pranzo ${data}`, `Cena ${data}`, `Aperitivo ${data}`, `Gelato ${data}`
   ];
   const datalist = document.getElementById("suggerimenti");
   suggerimenti.forEach(s => {
@@ -116,13 +131,11 @@ document.addEventListener("DOMContentLoaded", () => {
     datalist.appendChild(option);
   });
 
-  // Checkbox "Tutti"
   document.getElementById("tutti").addEventListener("change", function () {
     const allCheckboxes = document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]");
     allCheckboxes.forEach(cb => cb.checked = this.checked);
   });
 
-  // Form submit
   document.getElementById("spesaForm").addEventListener("submit", e => {
     e.preventDefault();
     const paga = document.getElementById("paga").value;
@@ -132,20 +145,10 @@ document.addEventListener("DOMContentLoaded", () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
     if (!paga || isNaN(importo) || beneficiari.length === 0) return;
-
     spese.push({ paga, importo, descrizione, per: beneficiari });
-    localStorage.setItem("spese", JSON.stringify(spese));
+    salvaDati();
     document.getElementById("spesaForm").reset();
     aggiornaUI();
-  });
-
-  // Reset dati
-  document.getElementById("resetDati").addEventListener("click", () => {
-    if (confirm("Vuoi davvero cancellare tutte le spese salvate?")) {
-      localStorage.removeItem("spese");
-      spese.length = 0;
-      aggiornaUI();
-    }
   });
 
   aggiornaUI();
