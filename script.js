@@ -1,99 +1,110 @@
 const spese = [];
+const pagamentiEffettuati = [];
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 function aggiornaUI() {
   const lista = document.getElementById("listaSpese");
   const transUI = document.getElementById("transazioni");
-  const riepilogoUI = document.getElementById("riepilogo");
+  const riepilogoContainer = document.getElementById("riepilogoContainer");
+
   lista.innerHTML = "";
   transUI.innerHTML = "";
-  riepilogoUI.innerHTML = "";
+  riepilogoContainer.innerHTML = "";
 
-  const debiti = {};
-  const totaleSpeso = {};
-  const dovutoPerSpesa = [];
-
-  persone.forEach(p => totaleSpeso[p] = 0);
-
-  spese.forEach((s, index) => {
+  // Mostra la lista delle spese
+  for (const s of spese) {
     const li = document.createElement("li");
-    li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
+    li.textContent = `${s.paga} ha pagato ${s.importo.toFixed(2)}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
+  }
 
-    totaleSpeso[s.paga] += s.importo;
+  // Calcolo debiti netti per ogni persona verso chi ha pagato
+  const debiti = {};
+
+  for (const s of spese) {
     const quota = s.importo / s.per.length;
-    const quoteSpesa = {};
-    persone.forEach(p => {
-      quoteSpesa[p] = s.per.includes(p) ? quota : 0;
-    });
-    dovutoPerSpesa.push({ descrizione: s.descrizione, quote: quoteSpesa });
-
     for (const beneficiario of s.per) {
       if (beneficiario === s.paga) continue;
       const chiave = `${beneficiario}->${s.paga}`;
       debiti[chiave] = (debiti[chiave] || 0) + quota;
     }
-  });
+  }
 
-  // Costruzione delle operazioni da fare
-  const riepilogoDebiti = {};
+  // Raggruppa debiti per persona
+  const debitiPerPersona = {};
   for (const chiave in debiti) {
     const [da, a] = chiave.split("->");
-    const quanto = debiti[chiave];
-    if (!riepilogoDebiti[da]) riepilogoDebiti[da] = [];
-    riepilogoDebiti[da].push({ a, quanto });
+    if (!debitiPerPersona[da]) debitiPerPersona[da] = {};
+    debitiPerPersona[da][a] = debiti[chiave];
   }
 
-  for (const persona in riepilogoDebiti) {
-    const debitiPersona = riepilogoDebiti[persona];
-    let somma = debitiPersona.reduce((acc, d) => acc + d.quanto, 0);
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${persona}</strong> (debito totale: ${somma.toFixed(2)}€):<ul>` +
-      debitiPersona.map(d => `<li>→ ${d.quanto.toFixed(2)}€ a ${d.a}</li>`).join("") +
-      "</ul>";
-    transUI.appendChild(li);
+  // Mostra le operazioni da fare (transazioni)
+  for (const debitore of Object.keys(debitiPerPersona)) {
+    const totaleDebito = Object.values(debitiPerPersona[debitore]).reduce((a, b) => a + b, 0);
+    const liDebitore = document.createElement("li");
+    liDebitore.textContent = `${debitore} (debito totale: ${totaleDebito.toFixed(2)}€):`;
+    transUI.appendChild(liDebitore);
+
+    for (const creditore in debitiPerPersona[debitore]) {
+      const importo = debitiPerPersona[debitore][creditore].toFixed(2);
+      const li = document.createElement("li");
+      li.textContent = `→ ${importo}€ a ${creditore}`;
+      transUI.appendChild(li);
+    }
   }
 
-  // === RIEPILOGO TABELLA ===
-  const table = document.createElement("table");
-  table.border = "1";
-  table.style.borderCollapse = "collapse";
-  table.style.marginTop = "20px";
+  // --- RIEPILOGO ---
+  // Calcola totale speso e speso da ogni persona
+  const totaleSpeso = spese.reduce((sum, s) => sum + s.importo, 0);
 
-  // intestazione
-  const intestazione = document.createElement("tr");
-  intestazione.innerHTML = `<th>Persona</th>` +
-    dovutoPerSpesa.map(s => `<th>${s.descrizione}</th>`).join("") +
-    `<th>Totale speso</th><th>Totale dovuto</th>`;
-  table.appendChild(intestazione);
-
-  persone.forEach(p => {
-    let riga = document.createElement("tr");
-    let celleQuote = "";
-    let totaleDovuto = 0;
-    dovutoPerSpesa.forEach(s => {
-      const q = s.quote[p] || 0;
-      totaleDovuto += q;
-      celleQuote += `<td>${q ? q.toFixed(2) + "€" : "-"}</td>`;
-    });
-    riga.innerHTML = `<td>${p}</td>${celleQuote}<td>${totaleSpeso[p].toFixed(2)}€</td><td>${totaleDovuto.toFixed(2)}€</td>`;
-    table.appendChild(riga);
+  const spesePagate = {};
+  persone.forEach(p => spesePagate[p] = 0);
+  spese.forEach(s => {
+    spesePagate[s.paga] += s.importo;
   });
 
-  // Totali finali
-  const rigaTotali = document.createElement("tr");
-  rigaTotali.innerHTML = `<th>Totali</th>` +
-    dovutoPerSpesa.map(s => {
-      const somma = Object.values(s.quote).reduce((acc, v) => acc + v, 0);
-      return `<th>${somma.toFixed(2)}€</th>`;
-    }).join("") +
-    `<th>${Object.values(totaleSpeso).reduce((a, b) => a + b, 0).toFixed(2)}€</th><th>${Object.values(dovutoPerSpesa).reduce((a, s) => a + Object.values(s.quote).reduce((sum, v) => sum + v, 0), 0).toFixed(2)}€</th>`;
-  table.appendChild(rigaTotali);
+  // Crea la tabella riepilogo
+  const riepilogoTable = document.createElement("table");
+  riepilogoTable.style.borderCollapse = "collapse";
+  riepilogoTable.style.width = "100%";
+  riepilogoTable.style.marginTop = "20px";
 
-  riepilogoUI.appendChild(table);
+  // Intestazione tabella
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr style="background:#ddd;">
+      <th style="border: 1px solid #999; padding: 5px;">Persona</th>
+      <th style="border: 1px solid #999; padding: 5px;">Ha pagato (€)</th>
+      ${spese.map(s => `<th style="border: 1px solid #999; padding: 5px;">${s.descrizione}</th>`).join('')}
+    </tr>
+  `;
+  riepilogoTable.appendChild(thead);
+
+  // Corpo tabella
+  const tbody = document.createElement("tbody");
+  for (const persona of persone) {
+    const row = document.createElement("tr");
+    row.style.border = "1px solid #999";
+
+    const celleSpesa = spese.map(s => {
+      const quota = s.per.includes(persona) ? (s.importo / s.per.length).toFixed(2) : "-";
+      return `<td style="border: 1px solid #999; padding: 5px; text-align:center;">${quota}</td>`;
+    }).join("");
+
+    row.innerHTML = `
+      <td style="border: 1px solid #999; padding: 5px;">${persona}</td>
+      <td style="border: 1px solid #999; padding: 5px; text-align:center;">${spesePagate[persona].toFixed(2)}</td>
+      ${celleSpesa}
+    `;
+    tbody.appendChild(row);
+  }
+  riepilogoTable.appendChild(tbody);
+
+  riepilogoContainer.appendChild(riepilogoTable);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Popola il select di chi ha pagato
   const select = document.getElementById("paga");
   persone.forEach(p => {
     const option = document.createElement("option");
@@ -102,10 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
     select.appendChild(option);
   });
 
+  // Popola i checkbox
   const col1 = document.getElementById("col1");
   const col2 = document.getElementById("col2");
   persone.forEach((p, i) => {
     const label = document.createElement("label");
+    label.style.display = "block";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = p;
@@ -114,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
     (i < 3 ? col1 : col2).appendChild(label);
   });
 
+  // Suggerimenti descrizione
   const oggi = new Date();
   const data = `${String(oggi.getDate()).padStart(2, "0")}/${String(oggi.getMonth() + 1).padStart(2, "0")}/${oggi.getFullYear()}`;
   const suggerimenti = [
@@ -131,11 +145,13 @@ document.addEventListener("DOMContentLoaded", () => {
     datalist.appendChild(option);
   });
 
+  // Checkbox "Tutti"
   document.getElementById("tutti").addEventListener("change", function () {
     const allCheckboxes = document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]");
     allCheckboxes.forEach(cb => cb.checked = this.checked);
   });
 
+  // Form submit
   document.getElementById("spesaForm").addEventListener("submit", e => {
     e.preventDefault();
     const paga = document.getElementById("paga").value;
