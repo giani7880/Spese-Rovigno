@@ -1,4 +1,5 @@
 const spese = [];
+const pagamentiEffettuati = [];
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 function aggiornaUI() {
@@ -7,42 +8,49 @@ function aggiornaUI() {
   lista.innerHTML = "";
   transUI.innerHTML = "";
 
-  // Mostra le spese
+  const saldi = {}; // saldo netto per persona
+  const debitiDettagliati = {}; // debiti da → a
+
+  persone.forEach(p => saldi[p] = 0);
+
   for (const s of spese) {
     const li = document.createElement("li");
-    li.textContent = `${s.paga} ha pagato ${s.importo.toFixed(2)}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
+    li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
-  }
 
-  // Calcolo debiti per beneficiario verso ciascun pagante
-  // Struttura: debiti[beneficiario] = { pagante: somma }
-  const debiti = {};
-  for (const persona of persone) {
-    debiti[persona] = {};
-  }
+    const quota = s.importo / s.per.length;
+    for (const beneficiario of s.per) {
+      if (beneficiario === s.paga) {
+        saldi[s.paga] += s.importo - quota;
+      } else {
+        saldi[beneficiario] -= quota;
+        saldi[s.paga] += quota;
 
-  for (const spesa of spese) {
-    const quota = spesa.importo / spesa.per.length;
-    for (const beneficiario of spesa.per) {
-      if (beneficiario === spesa.paga) continue; // no debito verso se stessi
-      debiti[beneficiario][spesa.paga] = (debiti[beneficiario][spesa.paga] || 0) + quota;
+        const chiave = `${beneficiario}->${s.paga}`;
+        debitiDettagliati[chiave] = (debitiDettagliati[chiave] || 0) + quota;
+      }
     }
   }
 
-  // Mostra le operazioni da fare, raggruppate per beneficiario
-  for (const beneficiario of persone) {
-    const debitoPaganti = debiti[beneficiario];
-    const totaleDebito = Object.values(debitoPaganti).reduce((acc, val) => acc + val, 0);
-    if (totaleDebito > 0) {
-      const liPersona = document.createElement("li");
-      liPersona.textContent = `${beneficiario} (debito totale: ${totaleDebito.toFixed(2)}€):`;
-      transUI.appendChild(liPersona);
+  // Raggruppa per debitore
+  const debitori = {};
+  for (const chiave in debitiDettagliati) {
+    const [da, a] = chiave.split("->");
+    if (!debitori[da]) debitori[da] = {};
+    debitori[da][a] = (debitori[da][a] || 0) + debitiDettagliati[chiave];
+  }
 
-      for (const [pagante, importo] of Object.entries(debitoPaganti)) {
-        const liDebito = document.createElement("li");
-        liDebito.textContent = `→ ${importo.toFixed(2)}€ a ${pagante}`;
-        transUI.appendChild(liDebito);
-      }
+  for (const da in debitori) {
+    const totale = Object.values(debitori[da]).reduce((a, b) => a + b, 0);
+    const titolo = document.createElement("li");
+    titolo.innerHTML = `<strong>${da} (debito totale: ${totale.toFixed(2)}€):</strong>`;
+    transUI.appendChild(titolo);
+
+    for (const a in debitori[da]) {
+      const importo = debitori[da][a].toFixed(2);
+      const voce = document.createElement("li");
+      voce.innerHTML = `→ ${importo}€ a ${a}`;
+      transUI.appendChild(voce);
     }
   }
 }
@@ -57,12 +65,11 @@ document.addEventListener("DOMContentLoaded", () => {
     select.appendChild(option);
   });
 
-  // Popola i checkbox per beneficiari in due colonne
+  // Popola i checkbox
   const col1 = document.getElementById("col1");
   const col2 = document.getElementById("col2");
   persone.forEach((p, i) => {
     const label = document.createElement("label");
-    label.style.display = "block";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = p;
@@ -89,26 +96,24 @@ document.addEventListener("DOMContentLoaded", () => {
     datalist.appendChild(option);
   });
 
-  // Checkbox "Tutti" per selezionare/deselezionare tutti i beneficiari
+  // Checkbox "Tutti"
   document.getElementById("tutti").addEventListener("change", function () {
     const allCheckboxes = document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]");
     allCheckboxes.forEach(cb => cb.checked = this.checked);
   });
 
-  // Gestione submit form aggiunta spesa
+  // Form submit
   document.getElementById("spesaForm").addEventListener("submit", e => {
     e.preventDefault();
     const paga = document.getElementById("paga").value;
     const importo = parseFloat(document.getElementById("importo").value);
-    const descrizione = document.getElementById("descrizione").value.trim();
+    const descrizione = document.getElementById("descrizione").value;
     const beneficiari = [...document.querySelectorAll("#col1 input[type=checkbox], #col2 input[type=checkbox]")]
       .filter(cb => cb.checked)
       .map(cb => cb.value);
-    if (!paga || isNaN(importo) || beneficiari.length === 0 || descrizione === "") return;
+    if (!paga || isNaN(importo) || beneficiari.length === 0) return;
     spese.push({ paga, importo, descrizione, per: beneficiari });
     document.getElementById("spesaForm").reset();
-    // Deseleziona "Tutti" dopo submit
-    document.getElementById("tutti").checked = false;
     aggiornaUI();
   });
 
