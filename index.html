@@ -30,19 +30,16 @@
     }
     button {
       margin-top: 10px;
+      padding: 8px 12px;
     }
     table {
       border-collapse: collapse;
-      width: 100%;
       margin-top: 20px;
     }
     th, td {
+      padding: 8px;
       border: 1px solid #999;
-      padding: 5px;
       text-align: center;
-    }
-    thead {
-      background-color: #ddd;
     }
   </style>
 </head>
@@ -85,7 +82,9 @@
   <ul id="transazioni"></ul>
 
   <h3>Riepilogo</h3>
-  <div id="riepilogoContainer"></div>
+  <table id="riepilogoTable"></table>
+
+  <button id="resetDati">Reset Dati</button>
 
   <script src="script.js"></script>
 </body>
