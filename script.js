@@ -2,6 +2,9 @@ const spese = [];
 const saldo = {};
 const pagamentiEffettuati = [];
 
+// Lista delle persone
+const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
+
 function aggiornaUI() {
   const lista = document.getElementById("listaSpese");
   const saldiUI = document.getElementById("saldi");
@@ -11,46 +14,31 @@ function aggiornaUI() {
   saldiUI.innerHTML = "";
   transUI.innerHTML = "";
 
+  // Mostra le spese inserite
   for (const s of spese) {
     const li = document.createElement("li");
     li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
   }
 
-  // reset saldo
+  // Reset saldo a 0 per tutti
   for (const p of persone) saldo[p] = 0;
 
-  // calcola saldo
+  // Calcola saldo: paga + importo - quote persone coinvolte
   for (const s of spese) {
     const quota = s.importo / s.per.length;
     saldo[s.paga] += s.importo;
     for (const p of s.per) saldo[p] -= quota;
   }
 
-  // mostra saldi
-  for (const [p, v] of Object.entries(saldo)) {
-    const li = document.createElement("li");
-    const arrotondato = Math.round(v * 100) / 100;
-    li.textContent = `${p}: ${arrotondato >= 0 ? "da ricevere" : "da dare"} ${Math.abs(arrotondato)}€`;
-    saldiUI.appendChild(li);
-  }
-
-  // aggiorna transazioni suggerite
-  aggiornaTransazioni();
-}
-
-function aggiornaTransazioni() {
-  const transUI = document.getElementById("transazioni");
-  transUI.innerHTML = "";
-
+  // Copia saldo per rimuovere pagamenti già effettuati
   const saldoCopy = { ...saldo };
-
-  // rimuovi le transazioni già pagate dai saldi
   for (const p of pagamentiEffettuati) {
     saldoCopy[p.da] += p.quanto;
     saldoCopy[p.a] -= p.quanto;
   }
 
+  // Dividi in debitori e creditori
   const debitori = [];
   const creditori = [];
 
@@ -60,6 +48,7 @@ function aggiornaTransazioni() {
     if (v > 0.01) creditori.push({ nome: p, valore: v });
   }
 
+  // Calcola le transazioni dettagliate per ogni debitore
   let i = 0, j = 0;
   const transazioniPerDebitore = {};
 
@@ -85,15 +74,26 @@ function aggiornaTransazioni() {
     if (creditore.valore < 0.01) j++;
   }
 
+  // Mostra i saldi dettagliati nel blocco Saldi
   for (const [deb, info] of Object.entries(transazioniPerDebitore)) {
     const li = document.createElement("li");
     li.textContent = `${deb} (debito totale: ${info.totale.toFixed(2)}€):`;
-    transUI.appendChild(li);
+    saldiUI.appendChild(li);
 
     info.dettagli.forEach(t => {
       const sub = document.createElement("li");
       sub.textContent = ` → ${t.quanto.toFixed(2)}€ a ${t.a}`;
       sub.style.marginLeft = "20px";
+      saldiUI.appendChild(sub);
+    });
+  }
+
+  // Mostra le transazioni suggerite con pulsanti per pagato/non pagato
+  transUI.innerHTML = "";
+  for (const [deb, info] of Object.entries(transazioniPerDebitore)) {
+    info.dettagli.forEach(t => {
+      const li = document.createElement("li");
+      li.textContent = `${deb} → ${t.a}: ${t.quanto.toFixed(2)}€ `;
 
       const giàPagato = pagamentiEffettuati.some(p => p.da === deb && p.a === t.a && p.quanto === t.quanto);
 
@@ -102,22 +102,19 @@ function aggiornaTransazioni() {
       btn.style.marginLeft = "10px";
       btn.onclick = () => {
         if (giàPagato) {
-          const i = pagamentiEffettuati.findIndex(p => p.da === deb && p.a === t.a && p.quanto === t.quanto);
-          if (i !== -1) pagamentiEffettuati.splice(i, 1);
+          const idx = pagamentiEffettuati.findIndex(p => p.da === deb && p.a === t.a && p.quanto === t.quanto);
+          if (idx !== -1) pagamentiEffettuati.splice(idx, 1);
         } else {
           pagamentiEffettuati.push({ da: deb, a: t.a, quanto: t.quanto });
         }
         aggiornaUI();
       };
 
-      sub.appendChild(btn);
-      transUI.appendChild(sub);
+      li.appendChild(btn);
+      transUI.appendChild(li);
     });
   }
 }
-
-// Lista delle persone
-const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 // Gestione invio modulo
 document.getElementById("spesaForm").addEventListener("submit", function (e) {
