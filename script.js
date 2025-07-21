@@ -72,7 +72,7 @@ function aggiornaUI() {
   });
   riepilogo.innerHTML = `<h3>Riepilogo spese</h3><table border="1">${intestazione}${righe.join("")}</table>`;
 
-  // Sintesi debiti netti
+  // Sintesi debiti netti con extra
   const netti = {};
   for (const da of persone) {
     for (const a of persone) {
@@ -87,15 +87,39 @@ function aggiornaUI() {
     }
   }
 
+  const extras = JSON.parse(localStorage.getItem("extras")) || {};
+
+  const aggiornaExtra = (chiave, valore) => {
+    extras[chiave] = parseFloat(valore) || 0;
+    localStorage.setItem("extras", JSON.stringify(extras));
+    aggiornaUI(); // ricalcola tutto
+  };
+
   const tabellaNetta = `<h3>Sintesi debiti netti</h3>
   <table border="1">
-    <tr><th>Da</th><th>A</th><th>Importo Netto</th></tr>
-    ${Object.entries(netti).map(([k, v]) => {
+    <tr><th>Da</th><th>A</th><th>Importo Netto</th><th>Extra</th><th>Totale</th></tr>
+    ${Object.entries(netti).map(([k, netto]) => {
       const [da, a] = k.split("->");
-      return `<tr><td>${da}</td><td>${a}</td><td>${v.toFixed(2)}€</td></tr>`;
+      const extra = extras[k] || 0;
+      const totale = netto + extra;
+      return `<tr>
+        <td>${da}</td>
+        <td>${a}</td>
+        <td>${netto.toFixed(2)}€</td>
+        <td><input type="number" data-extra="${k}" value="${extra}" style="width:70px"/></td>
+        <td>${totale.toFixed(2)}€</td>
+      </tr>`;
     }).join("")}
   </table>`;
+
   sintesiNetta.innerHTML = tabellaNetta;
+
+  // Eventi su input Extra
+  sintesiNetta.querySelectorAll("input[data-extra]").forEach(input => {
+    input.addEventListener("change", () => {
+      aggiornaExtra(input.dataset.extra, input.value);
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
