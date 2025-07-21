@@ -3,116 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gestione Spese Vacanza</title>
+  <title>Gestione Spese</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      line-height: 1.5;
+      background-color: #f6f6f6;
     }
     label {
-      display: inline-block;
-      margin-top: 10px;
       font-weight: bold;
     }
-    input[type="number"], input[type="text"], select {
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .persone-grid {
+      display: flex;
+      gap: 50px;
+    }
+    .colonna {
+      display: flex;
+      flex-direction: column;
+    }
+    input, select {
+      padding: 5px;
       margin-top: 5px;
-      padding: 4px;
-      width: 200px;
     }
     button {
-      margin-left: 10px;
-      margin-top: 5px;
-    }
-    #personeCheckbox label {
-      display: inline-block;
-      margin-right: 10px;
-    }
-    ul {
-      padding-left: 20px;
-    }
-    .suggerimenti {
-      margin-top: 5px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .suggerimenti button {
-      padding: 2px 6px;
-      font-size: 0.85em;
-    }
-    table {
-      margin-top: 20px;
-      border-collapse: collapse;
-      width: 100%;
-    }
-    table, th, td {
-      border: 1px solid #999;
-    }
-    th, td {
-      padding: 6px;
-      text-align: center;
-    }
-    .sezione {
-      margin-top: 30px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Gestione Spese Vacanza</h1>
+  <h2>Gestione Spese</h2>
 
   <form id="spesaForm">
-    <div>
-      <label>Chi ha pagato:</label><br/>
+    <div class="form-group">
+      <label for="paga">Chi ha pagato:</label><br/>
       <select id="paga" required></select>
     </div>
 
-    <div>
-      <label>Importo (€):</label><br/>
-      <input type="number" id="importo" required step="0.01" min="0" />
+    <div class="form-group">
+      <label for="importo">Importo:</label><br/>
+      <input type="number" id="importo" step="0.01" required /> €
     </div>
 
-    <div>
-      <label>Descrizione:</label><br/>
-      <input type="text" id="descrizione" placeholder="es: Cena 21/07/2025" list="suggerimentiLista"/>
-      <datalist id="suggerimentiLista"></datalist>
+    <div class="form-group">
+      <label for="descrizione">Descrizione:</label><br/>
+      <input type="text" id="descrizione" list="suggerimenti" placeholder="Inserisci descrizione"/>
+      <datalist id="suggerimenti"></datalist>
     </div>
 
-    <div class="suggerimenti">
-      <span>Suggerimenti:</span>
-      <button type="button" onclick="inserisciSuggerimento('Spesa')">Spesa</button>
-      <button type="button" onclick="inserisciSuggerimento('Colazione')">Colazione</button>
-      <button type="button" onclick="inserisciSuggerimento('Pranzo')">Pranzo</button>
-      <button type="button" onclick="inserisciSuggerimento('Cena')">Cena</button>
-      <button type="button" onclick="inserisciSuggerimento('Aperitivo')">Aperitivo</button>
-      <button type="button" onclick="inserisciSuggerimento('Gelato')">Gelato</button>
+    <div class="form-group">
+      <label>Per chi è la spesa:</label><br/>
+      <label><input type="checkbox" id="tutti" /> Tutti</label>
+      <div class="persone-grid">
+        <div class="colonna" id="col1"></div>
+        <div class="colonna" id="col2"></div>
+      </div>
     </div>
 
-    <div>
-      <label>Per chi è la spesa:</label>
-      <button type="button" id="selezionaTutti">Tutti</button>
-      <div id="personeCheckbox"></div>
-    </div>
-
-    <div style="margin-top: 10px;">
-      <button type="submit">Aggiungi spesa</button>
-    </div>
+    <button type="submit">Aggiungi spesa</button>
   </form>
 
-  <div class="sezione">
-    <h2>Spese</h2>
-    <ul id="listaSpese"></ul>
-  </div>
+  <h3>Spese</h3>
+  <ul id="listaSpese"></ul>
 
-  <div class="sezione">
-    <h2>Operazioni da fare</h2>
-    <ul id="transazioni"></ul>
-  </div>
-
-  <div class="sezione">
-    <h2>Sintesi</h2>
-    <div id="sintesiFinale"></div>
-  </div>
+  <h3>Operazioni da fare</h3>
+  <ul id="transazioni"></ul>
 
   <script src="script.js"></script>
 </body>
