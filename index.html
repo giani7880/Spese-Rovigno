@@ -1,107 +1,73 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gestione Spese</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f6f6f6;
-    }
-    label {
-      font-weight: bold;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    .persone-grid {
-      display: flex;
-      gap: 50px;
-    }
-    .colonna {
-      display: flex;
-      flex-direction: column;
-    }
-    input, select {
-      padding: 5px;
-      margin-top: 5px;
-    }
-    button {
-      margin-top: 10px;
-      margin-right: 10px;
-      padding: 6px 12px;
-      cursor: pointer;
-    }
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-      width: 100%;
-      background: white;
-    }
-    table, th, td {
-      border: 1px solid #999;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #ddd;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gestione Spese con Export/Import</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f6f6f6; }
+  label { font-weight: bold; }
+  .form-group { margin-bottom: 15px; }
+  .persone-grid { display: flex; gap: 50px; }
+  .colonna { display: flex; flex-direction: column; }
+  input, select { padding: 5px; margin-top: 5px; }
+  button { margin-top: 10px; margin-right: 10px; padding: 6px 12px; cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 20px; width: 100%; background: white; }
+  table, th, td { border: 1px solid #999; }
+  th, td { padding: 8px; text-align: center; }
+  th { background-color: #ddd; }
+</style>
 </head>
 <body>
-  <h2>Gestione Spese</h2>
+<h2>Gestione Spese</h2>
 
-  <form id="spesaForm">
-    <div class="form-group">
-      <label for="paga">Chi ha pagato:</label><br/>
-      <select id="paga" required></select>
-    </div>
-
-    <div class="form-group">
-      <label for="importo">Importo:</label><br/>
-      <input type="number" id="importo" step="0.01" required /> €
-    </div>
-
-    <div class="form-group">
-      <label for="descrizione">Descrizione:</label><br/>
-      <input type="text" id="descrizione" list="suggerimenti" placeholder="Inserisci descrizione" />
-      <datalist id="suggerimenti"></datalist>
-    </div>
-
-    <div class="form-group">
-      <label>Per chi è la spesa:</label><br/>
-      <label><input type="checkbox" id="tutti" /> Tutti</label>
-      <div class="persone-grid">
-        <div class="colonna" id="col1"></div>
-        <div class="colonna" id="col2"></div>
-      </div>
-    </div>
-
-    <button type="submit">Aggiungi spesa</button>
-  </form>
-
-  <div style="margin-top: 20px;">
-    <button id="btnEsporta">Esporta spese</button>
-    <input type="file" id="inputImporta" accept=".json" style="display:none" />
-    <button id="btnImporta">Importa spese</button>
+<form id="spesaForm">
+  <div class="form-group">
+    <label for="paga">Chi ha pagato:</label><br/>
+    <select id="paga" required></select>
   </div>
 
-  <h3>Spese</h3>
-  <ul id="listaSpese"></ul>
+  <div class="form-group">
+    <label for="importo">Importo:</label><br/>
+    <input type="number" id="importo" step="0.01" required /> €
+  </div>
 
-  <h3>Operazioni da fare</h3>
-  <ul id="transazioni"></ul>
+  <div class="form-group">
+    <label for="descrizione">Descrizione:</label><br/>
+    <input type="text" id="descrizione" list="suggerimenti" placeholder="Inserisci descrizione" />
+    <datalist id="suggerimenti"></datalist>
+  </div>
 
-  <h3>Riepilogo spese</h3>
-  <div id="riepilogo"></div>
+  <div class="form-group">
+    <label>Per chi è la spesa:</label><br/>
+    <label><input type="checkbox" id="tutti" /> Tutti</label>
+    <div class="persone-grid">
+      <div class="colonna" id="col1"></div>
+      <div class="colonna" id="col2"></div>
+    </div>
+  </div>
 
-  <h3>Sintesi debiti netti</h3>
-  <div id="sintesiDebiti"></div>
+  <button type="submit" id="btnAggiungi">Aggiungi spesa</button>
+</form>
 
-  <script src="script.js"></script>
+<div style="margin-top: 20px;">
+  <button id="btnEsporta">Esporta spese</button>
+  <input type="file" id="inputImporta" accept=".json" style="display:none" />
+  <button id="btnImporta">Importa spese</button>
+</div>
+
+<h3>Spese</h3>
+<ul id="listaSpese"></ul>
+
+<h3>Operazioni da fare</h3>
+<ul id="transazioni"></ul>
+
+<h3>Riepilogo spese</h3>
+<div id="riepilogo"></div>
+
+<h3>Sintesi debiti netti</h3>
+<div id="sintesiDebiti"></div>
+
+<script src="script.js"></script>
 </body>
 </html>
