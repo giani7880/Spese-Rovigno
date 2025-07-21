@@ -1,7 +1,5 @@
 const spese = [];
-const saldo = {};
 const pagamentiEffettuati = [];
-
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 function aggiornaUI() {
@@ -11,77 +9,39 @@ function aggiornaUI() {
   lista.innerHTML = "";
   transUI.innerHTML = "";
 
-  // Lista spese
+  const debiti = {};
+
   for (const s of spese) {
     const li = document.createElement("li");
     li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
     lista.appendChild(li);
-  }
 
-  // Reset saldo
-  for (const p of persone) saldo[p] = 0;
-
-  // Calcola saldo
-  for (const s of spese) {
     const quota = s.importo / s.per.length;
-    saldo[s.paga] += s.importo;
-    for (const p of s.per) saldo[p] -= quota;
-  }
 
-  aggiornaTransazioni();
-}
-
-function aggiornaTransazioni() {
-  const transUI = document.getElementById("transazioni");
-  transUI.innerHTML = "";
-
-  const saldoCopy = { ...saldo };
-
-  for (const p of pagamentiEffettuati) {
-    saldoCopy[p.da] += p.quanto;
-    saldoCopy[p.a] -= p.quanto;
-  }
-
-  const debitori = [];
-  const creditori = [];
-
-  for (const [p, val] of Object.entries(saldoCopy)) {
-    const v = Math.round(val * 100) / 100;
-    if (v < -0.01) debitori.push({ nome: p, valore: -v });
-    if (v > 0.01) creditori.push({ nome: p, valore: v });
-  }
-
-  let i = 0, j = 0;
-  const transazioniPerDebitore = {};
-
-  while (i < debitori.length && j < creditori.length) {
-    const debitore = debitori[i];
-    const creditore = creditori[j];
-    const importo = Math.min(debitore.valore, creditore.valore);
-
-    if (!transazioniPerDebitore[debitore.nome]) {
-      transazioniPerDebitore[debitore.nome] = { totale: 0, dettagli: [] };
+    for (const beneficiario of s.per) {
+      if (beneficiario === s.paga) continue;
+      const chiave = `${beneficiario}->${s.paga}`;
+      debiti[chiave] = (debiti[chiave] || 0) + quota;
     }
-
-    transazioniPerDebitore[debitore.nome].totale += importo;
-    transazioniPerDebitore[debitore.nome].dettagli.push({
-      a: creditore.nome,
-      quanto: importo
-    });
-
-    debitore.valore -= importo;
-    creditore.valore -= importo;
-
-    if (debitore.valore < 0.01) i++;
-    if (creditore.valore < 0.01) j++;
   }
 
-  for (const [deb, info] of Object.entries(transazioniPerDebitore)) {
+  const debitori = {};
+
+  for (const chiave in debiti) {
+    const [da, a] = chiave.split("->");
+    const quanto = debiti[chiave];
+
+    if (!debitori[da]) debitori[da] = [];
+    debitori[da].push({ a, quanto });
+  }
+
+  for (const deb in debitori) {
+    const totale = debitori[deb].reduce((sum, t) => sum + t.quanto, 0);
     const li = document.createElement("li");
-    li.textContent = `${deb} (debito totale: ${info.totale.toFixed(2)}€):`;
+    li.textContent = `${deb} (debito totale: ${totale.toFixed(2)}€):`;
     transUI.appendChild(li);
 
-    info.dettagli.forEach(t => {
+    for (const t of debitori[deb]) {
       const sub = document.createElement("li");
       sub.textContent = `→ ${t.quanto.toFixed(2)}€ a ${t.a}`;
       sub.style.marginLeft = "20px";
@@ -90,7 +50,6 @@ function aggiornaTransazioni() {
 
       const btn = document.createElement("button");
       btn.textContent = giàPagato ? "❌ Non pagato" : "✅ Pagato";
-      btn.style.marginLeft = "10px";
       btn.onclick = () => {
         if (giàPagato) {
           const i = pagamentiEffettuati.findIndex(p => p.da === deb && p.a === t.a && p.quanto === t.quanto);
@@ -103,18 +62,17 @@ function aggiornaTransazioni() {
 
       sub.appendChild(btn);
       transUI.appendChild(sub);
-    });
+    }
   }
 }
 
-// Inizializzazione form
 document.getElementById("spesaForm").addEventListener("submit", function (e) {
   e.preventDefault();
 
   const paga = document.getElementById("paga").value;
   const importo = parseFloat(document.getElementById("importo").value);
   const descrizione = document.getElementById("descrizione").value;
-  const checkboxes = document.querySelectorAll("#persone input[type=checkbox]");
+  const checkboxes = document.querySelectorAll("#persone input[type=checkbox]:not(#tutti)");
   const per = [];
 
   checkboxes.forEach(cb => {
@@ -129,25 +87,54 @@ document.getElementById("spesaForm").addEventListener("submit", function (e) {
   aggiornaUI();
 });
 
-// Genera elenco persone + "Tutti"
 window.onload = () => {
-  const div = document.getElementById("persone");
+  const select = document.getElementById("paga");
   persone.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p;
+    option.textContent = p;
+    select.appendChild(option);
+  });
+
+  const col1 = document.getElementById("col1");
+  const col2 = document.getElementById("col2");
+
+  persone.forEach((p, i) => {
     const label = document.createElement("label");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = p;
     label.appendChild(cb);
-    label.appendChild(document.createTextNode(" " + p));
-    div.appendChild(label);
-    div.appendChild(document.createElement("br"));
+    label.append(" " + p);
+    if (i < 3) col1.appendChild(label);
+    else col2.appendChild(label);
   });
 
-  // Gestione checkbox "Tutti"
-  document.getElementById("checkTutti").addEventListener("change", function () {
-    const tutti = this.checked;
-    const boxes = div.querySelectorAll("input[type=checkbox]");
-    boxes.forEach(cb => cb.checked = tutti);
+  const tutti = document.getElementById("tutti");
+  tutti.addEventListener("change", function () {
+    const checkboxes = document.querySelectorAll("#persone input[type=checkbox]:not(#tutti)");
+    checkboxes.forEach(cb => cb.checked = tutti.checked);
+  });
+
+  // Suggerimenti descrizione con data corrente
+  const oggi = new Date();
+  const giorno = String(oggi.getDate()).padStart(2, "0");
+  const mese = String(oggi.getMonth() + 1).padStart(2, "0");
+  const anno = oggi.getFullYear();
+  const data = `${giorno}/${mese}/${anno}`;
+  const suggerimenti = [
+    `Spesa ${data}`,
+    `Colazione ${data}`,
+    `Pranzo ${data}`,
+    `Cena ${data}`,
+    `Aperitivo ${data}`,
+    `Gelato ${data}`
+  ];
+  const datalist = document.getElementById("suggerimenti");
+  suggerimenti.forEach(text => {
+    const option = document.createElement("option");
+    option.value = text;
+    datalist.appendChild(option);
   });
 
   aggiornaUI();
