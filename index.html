@@ -2,40 +2,36 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gestione Spese Rovigno</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-    h1, h2, h3 { color: #333; }
-    li { margin: 5px 0; }
-    button { cursor: pointer; }
+    body { font-family: Arial; margin: 20px; }
+    h2 { margin-top: 30px; }
+    button { margin-left: 10px; }
   </style>
 </head>
 <body>
-  <h1>Spese Rovigno</h1>
+  <h1>Gestione Spese</h1>
 
-  <h2>Nuova Spesa</h2>
   <form id="spesaForm">
-    <label for="paga">Chi ha pagato:</label>
-    <select id="paga" required>
-      <option value="Filippo">Filippo</option>
-      <option value="Alex">Alex</option>
-      <option value="Bruno">Bruno</option>
-      <option value="Nicoletta">Nicoletta</option>
-      <option value="Camilla">Camilla</option>
-      <option value="Geani">Geani</option>
-    </select><br><br>
-
-    <label for="importo">Importo (€):</label>
-    <input type="number" id="importo" required><br><br>
-
-    <label for="descrizione">Descrizione:</label>
-    <input type="text" id="descrizione" required><br><br>
-
-    <label>Persone coinvolte:</label><br>
-    <div id="persone"></div><br>
-
-    <button type="submit">Aggiungi Spesa</button>
+    <label>Chi ha pagato:
+      <select id="paga">
+        <option>Filippo</option>
+        <option>Alex</option>
+        <option>Bruno</option>
+        <option>Nicoletta</option>
+        <option>Camilla</option>
+        <option>Geani</option>
+      </select>
+    </label>
+    <br><br>
+    <label>Importo (€): <input type="number" id="importo" required></label>
+    <br><br>
+    <label>Descrizione: <input type="text" id="descrizione" required></label>
+    <br><br>
+    <label>Spesa fatta per:</label><br>
+    <div id="persone"></div>
+    <br>
+    <button type="submit">Aggiungi spesa</button>
   </form>
 
   <h2>Spese</h2>
@@ -44,7 +40,7 @@
   <h2>Saldi</h2>
   <ul id="saldi"></ul>
 
-  <h2>Transazioni suggerite</h2>
+  <h2>Transazioni</h2>
   <ul id="transazioni"></ul>
 
   <script src="script.js"></script>
