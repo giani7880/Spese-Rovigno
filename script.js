@@ -1,110 +1,82 @@
 const spese = [];
-const pagamentiEffettuati = [];
 const persone = ["Filippo", "Alex", "Bruno", "Nicoletta", "Camilla", "Geani"];
 
 function aggiornaUI() {
   const lista = document.getElementById("listaSpese");
   const transUI = document.getElementById("transazioni");
-  const riepilogoContainer = document.getElementById("riepilogoContainer");
-
+  const riepilogo = document.getElementById("riepilogoTable");
   lista.innerHTML = "";
   transUI.innerHTML = "";
-  riepilogoContainer.innerHTML = "";
+  riepilogo.innerHTML = "";
 
-  // Mostra la lista delle spese
-  for (const s of spese) {
-    const li = document.createElement("li");
-    li.textContent = `${s.paga} ha pagato ${s.importo.toFixed(2)}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
-    lista.appendChild(li);
-  }
-
-  // Calcolo debiti netti per ogni persona verso chi ha pagato
   const debiti = {};
+  const totaliSpesi = {};
+  persone.forEach(p => totaliSpesi[p] = 0);
 
-  for (const s of spese) {
+  // Popola lista spese
+  spese.forEach((s, idx) => {
+    const li = document.createElement("li");
+    li.textContent = `${s.paga} ha pagato ${s.importo}€ per ${s.descrizione} (per: ${s.per.join(", ")})`;
+    lista.appendChild(li);
+
     const quota = s.importo / s.per.length;
+    totaliSpesi[s.paga] += s.importo;
+
     for (const beneficiario of s.per) {
       if (beneficiario === s.paga) continue;
       const chiave = `${beneficiario}->${s.paga}`;
       debiti[chiave] = (debiti[chiave] || 0) + quota;
     }
-  }
+  });
 
-  // Raggruppa debiti per persona
-  const debitiPerPersona = {};
+  // Riepilogo delle transazioni
+  const riepilogoDebiti = {};
   for (const chiave in debiti) {
     const [da, a] = chiave.split("->");
-    if (!debitiPerPersona[da]) debitiPerPersona[da] = {};
-    debitiPerPersona[da][a] = debiti[chiave];
+    if (!riepilogoDebiti[da]) riepilogoDebiti[da] = [];
+    riepilogoDebiti[da].push({ a, quanto: debiti[chiave] });
   }
 
-  // Mostra le operazioni da fare (transazioni)
-  for (const debitore of Object.keys(debitiPerPersona)) {
-    const totaleDebito = Object.values(debitiPerPersona[debitore]).reduce((a, b) => a + b, 0);
-    const liDebitore = document.createElement("li");
-    liDebitore.textContent = `${debitore} (debito totale: ${totaleDebito.toFixed(2)}€):`;
-    transUI.appendChild(liDebitore);
+  for (const persona in riepilogoDebiti) {
+    const dettagli = riepilogoDebiti[persona];
+    const totale = dettagli.reduce((sum, d) => sum + d.quanto, 0).toFixed(2);
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${persona}</strong> (debito totale: ${totale}€):<ul style="margin: 5px 0 10px 15px;">` +
+      dettagli.map(d => `<li>→ ${d.quanto.toFixed(2)}€ a ${d.a}</li>`).join("") + "</ul>";
+    transUI.appendChild(li);
+  }
 
-    for (const creditore in debitiPerPersona[debitore]) {
-      const importo = debitiPerPersona[debitore][creditore].toFixed(2);
-      const li = document.createElement("li");
-      li.textContent = `→ ${importo}€ a ${creditore}`;
-      transUI.appendChild(li);
+  // Tabella riepilogo spese
+  const header = document.createElement("tr");
+  header.innerHTML = "<th>Persona</th><th>Totale speso</th>" +
+    spese.map((s, i) => `<th>${s.descrizione}</th>`).join("");
+  riepilogo.appendChild(header);
+
+  persone.forEach(persona => {
+    const row = document.createElement("tr");
+    let html = `<td>${persona}</td><td>${totaliSpesi[persona].toFixed(2)}€</td>`;
+    for (const s of spese) {
+      const quota = s.per.includes(persona) ? (s.importo / s.per.length).toFixed(2) : "-";
+      html += `<td>${quota !== "-" ? quota + "€" : "-"}</td>`;
+    }
+    row.innerHTML = html;
+    riepilogo.appendChild(row);
+  });
+}
+
+// Caricamento iniziale da localStorage
+document.addEventListener("DOMContentLoaded", () => {
+  const datiSalvati = localStorage.getItem("spese");
+  if (datiSalvati) {
+    try {
+      const caricate = JSON.parse(datiSalvati);
+      if (Array.isArray(caricate)) spese.push(...caricate);
+    } catch (e) {
+      console.error("Errore nel caricamento da localStorage:", e);
     }
   }
 
-  // --- RIEPILOGO ---
-  // Calcola totale speso e speso da ogni persona
-  const totaleSpeso = spese.reduce((sum, s) => sum + s.importo, 0);
-
-  const spesePagate = {};
-  persone.forEach(p => spesePagate[p] = 0);
-  spese.forEach(s => {
-    spesePagate[s.paga] += s.importo;
-  });
-
-  // Crea la tabella riepilogo
-  const riepilogoTable = document.createElement("table");
-  riepilogoTable.style.borderCollapse = "collapse";
-  riepilogoTable.style.width = "100%";
-  riepilogoTable.style.marginTop = "20px";
-
-  // Intestazione tabella
-  const thead = document.createElement("thead");
-  thead.innerHTML = `
-    <tr style="background:#ddd;">
-      <th style="border: 1px solid #999; padding: 5px;">Persona</th>
-      <th style="border: 1px solid #999; padding: 5px;">Ha pagato (€)</th>
-      ${spese.map(s => `<th style="border: 1px solid #999; padding: 5px;">${s.descrizione}</th>`).join('')}
-    </tr>
-  `;
-  riepilogoTable.appendChild(thead);
-
-  // Corpo tabella
-  const tbody = document.createElement("tbody");
-  for (const persona of persone) {
-    const row = document.createElement("tr");
-    row.style.border = "1px solid #999";
-
-    const celleSpesa = spese.map(s => {
-      const quota = s.per.includes(persona) ? (s.importo / s.per.length).toFixed(2) : "-";
-      return `<td style="border: 1px solid #999; padding: 5px; text-align:center;">${quota}</td>`;
-    }).join("");
-
-    row.innerHTML = `
-      <td style="border: 1px solid #999; padding: 5px;">${persona}</td>
-      <td style="border: 1px solid #999; padding: 5px; text-align:center;">${spesePagate[persona].toFixed(2)}</td>
-      ${celleSpesa}
-    `;
-    tbody.appendChild(row);
-  }
-  riepilogoTable.appendChild(tbody);
-
-  riepilogoContainer.appendChild(riepilogoTable);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Popola il select di chi ha pagato
+  // Popola select "chi ha pagato"
   const select = document.getElementById("paga");
   persone.forEach(p => {
     const option = document.createElement("option");
@@ -113,12 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
     select.appendChild(option);
   });
 
-  // Popola i checkbox
+  // Popola checkbox "per chi"
   const col1 = document.getElementById("col1");
   const col2 = document.getElementById("col2");
   persone.forEach((p, i) => {
     const label = document.createElement("label");
-    label.style.display = "block";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = p;
@@ -127,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     (i < 3 ? col1 : col2).appendChild(label);
   });
 
-  // Suggerimenti descrizione
+  // Suggerimenti per descrizione
   const oggi = new Date();
   const data = `${String(oggi.getDate()).padStart(2, "0")}/${String(oggi.getMonth() + 1).padStart(2, "0")}/${oggi.getFullYear()}`;
   const suggerimenti = [
@@ -161,9 +132,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
     if (!paga || isNaN(importo) || beneficiari.length === 0) return;
+
     spese.push({ paga, importo, descrizione, per: beneficiari });
+    localStorage.setItem("spese", JSON.stringify(spese));
     document.getElementById("spesaForm").reset();
     aggiornaUI();
+  });
+
+  // Reset dati
+  document.getElementById("resetDati").addEventListener("click", () => {
+    if (confirm("Vuoi davvero cancellare tutte le spese salvate?")) {
+      localStorage.removeItem("spese");
+      spese.length = 0;
+      aggiornaUI();
+    }
   });
 
   aggiornaUI();
