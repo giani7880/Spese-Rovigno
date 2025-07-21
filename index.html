@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Spese Vacanza</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    input, select, button { margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Spese Vacanza</h1>
+
+  <h2>Aggiungi Spesa</h2>
+  <form id="spesaForm">
+    Chi ha pagato:
+    <select id="chi"></select><br>
+    Importo: <input type="number" id="importo" step="0.01"><br>
+    Descrizione: <input type="text" id="descrizione"><br>
+    Per chi:<br>
+    <div id="checkboxes"></div>
+    <button type="submit">Aggiungi</button>
+  </form>
+
+  <h2>Spese</h2>
+  <ul id="listaSpese"></ul>
+
+  <h2>Saldi</h2>
+  <ul id="saldi"></ul>
+
+  <h2>Transazioni suggerite</h2>
+  <ul id="transazioni"></ul>
+
+  <script src="script.js"></script>
+</body>
+</html>
